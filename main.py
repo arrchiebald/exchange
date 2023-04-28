@@ -12,7 +12,7 @@ from random import randint
 from telebot import types
 
 bot = telebot.TeleBot('6250800326:AAEgBf4F8ET3UKDVvajZKI6tlRHEihMWP3Q')
-gc = gspread.service_account(filename='sanguine-parsec-384918-4f7f2d66e7bd.json')
+gc = gspread.service_account(filename='exchange-384915-7fec015fbe08.json')
 engine = sqlalchemy.create_engine('postgresql+psycopg2://jgsqklcsypqoky:091e08d9f3b9b038b1c8b1662a34b2bed42c52d2fc6baf6f6809f0a63712ca7b@ec2-3-248-141-201.eu-west-1.compute.amazonaws.com:5432/d6l089hfn0o91n')
 Base = declarative_base()
 Session = sqlalchemy.orm.sessionmaker(bind=engine)
