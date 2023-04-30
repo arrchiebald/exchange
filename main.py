@@ -10,7 +10,7 @@ from models import Users, UserHistory, ApplicationsSell, ApplicationsBuy, Base, 
 from random import randint
 from telebot import types
 
-bot = telebot.TeleBot('6004733986:AAHyD9Y6n-Ildh1-BxKN7I2w23W_TJS3NRk')
+bot = telebot.TeleBot('6250800326:AAEgBf4F8ET3UKDVvajZKI6tlRHEihMWP3Q')
 gc = gspread.service_account(filename='exchange-384915-7fec015fbe08.json')
 engine = sqlalchemy.create_engine('postgresql+psycopg2://jgsqklcsypqoky:091e08d9f3b9b038b1c8b1662a34b2bed42c52d2fc6baf6f6809f0a63712ca7b@ec2-3-248-141-201.eu-west-1.compute.amazonaws.com:5432/d6l089hfn0o91n')
 Session = sqlalchemy.orm.sessionmaker(bind=engine)
@@ -19,7 +19,7 @@ banks_sell_calldata = {'monobank_sell': 'Монобанк', 'privatbank_sell': '
 banks_buy_calldata = {'monobank_buy': 'Монобанк', 'privatbank_buy': 'ПриватБанк',  'pumb_buy': 'ПУМБ', 'abank_buy': 'А-Банк', 'otp_buy': 'ОТП','alpha_buy': 'Альфа'}
 sh = gc.open('Ресурсы для бота')
 
-admins_chat_id = ['595071163', '5518462737']
+admins_chat_id = ['5518462737']
 
 Base.metadata.create_all(engine)
 
