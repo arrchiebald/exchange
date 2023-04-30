@@ -26,7 +26,7 @@ Base.metadata.create_all(engine)
 # Старт
 @bot.message_handler(commands=['start'])
 def start(message):
-    text = '*Добрый день*, вся хуйня'
+    text = '*Добрый день*, вся хуйня asdjkasjdka'
     with Session() as session:
         user_list = session.query(Users).all()
         if message.from_user.id not in [user_id.id for user_id in user_list]:
@@ -46,7 +46,7 @@ def start(message):
 
 # Выбор действия после старта
 def select_action(message):
-    text_to_user = 'Выберите действие, которое вы хотите выполнить'
+    text_to_user = 'Выберите действие, которое вы хотите выполнить asdsad'
     markup = types.InlineKeyboardMarkup(row_width=1)
     sell_btn = types.InlineKeyboardButton('Я хочу купить USDT', callback_data='sell_btn')
     buy_btn = types.InlineKeyboardButton('Я хочу продать USDT', callback_data='buy_btn')
