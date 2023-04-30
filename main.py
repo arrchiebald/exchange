@@ -26,7 +26,7 @@ Base.metadata.create_all(engine)
 # Старт
 @bot.message_handler(commands=['start'])
 def start(message):
-    text = '*Добрый день*, вся хуйня asdjkasjdka'
+    text = '*Привет👋* /nЭтот бот сделан нашей командой для закрытия одной простой потребности - регулярный, быстрый и выгодный обмен вашей гривны на USDT и наоборот'
     with Session() as session:
         user_list = session.query(Users).all()
         if message.from_user.id not in [user_id.id for user_id in user_list]:
@@ -46,7 +46,7 @@ def start(message):
 
 # Выбор действия после старта
 def select_action(message):
-    text_to_user = 'Выберите действие, которое вы хотите выполнить asdsad'
+    text_to_user = 'Выберите действие, которое вы хотите выполнить'
     markup = types.InlineKeyboardMarkup(row_width=1)
     sell_btn = types.InlineKeyboardButton('Я хочу купить USDT', callback_data='sell_btn')
     buy_btn = types.InlineKeyboardButton('Я хочу продать USDT', callback_data='buy_btn')
@@ -84,7 +84,7 @@ def action(call):
 
         back = types.InlineKeyboardButton('⬅️Назад', callback_data='back')
         markup.add(back)
-        text = 'Выберите банк, которым вы хотите воспользоваться'
+        text = 'Выберите банк, которым вы хотите воспользоваться' 
         bot.edit_message_text(text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
 
     elif call.data in ['monobank_sell', 'privatbank_sell', 'pumb_sell', 'abank_sell', 'otp_sell', 'alpha_sell']:
@@ -95,14 +95,14 @@ def action(call):
             session.commit()
             if last_choice.last_trc20_wallet:
                 markup.add(types.KeyboardButton(last_choice.last_trc20_wallet))
-            text = 'Укажите, пожалуйста, адрес USDT TRC20, на который мы отправим средства.'
+            text = 'Укажите, пожалуйста, адрес USDT TRC20, на который мы должны будем отправить средства.'
             bot.delete_message(call.message.chat.id, call.message.message_id)
             bot.send_message(call.message.chat.id, text, reply_markup=markup)
             bot.register_next_step_handler(call.message, user_wallet)
     
     elif call.data == 'confirm_sell':
         markup = types.ReplyKeyboardRemove()
-        text = 'Оплатите на реквезиты, что я отправлю ниже и подтвердите после отправки⏬'
+        text = 'Оплатите на реквизиты, что я отправлю ниже и подтвердите после отправки👇'
         bot.delete_message(chat_id=call.message.chat.id,  message_id=call.message.message_id)
         bot.send_message(call.message.chat.id, text, reply_markup=markup)
         requisites_uah(call.message)
@@ -134,7 +134,7 @@ def action(call):
     elif call.data[:23] == 'agree_transactions_sell':
         with Session() as session:
             db_id = session.query(ApplicationsSell).filter(ApplicationsSell.id==call.data[23:]).first()
-            text = 'Средства были отправлены вам на кошелёк. Спасибо за выбор нашего сервиса. Нажмите на /start, если хотите продолжить операцию'
+            text = 'Средства были отправлены вам на кошелёк. Обычно они поступают в течении 2-5 минут. Спасибо за выбор нашего сервиса🤙./nНажмите на /start, чтобы создать новую заявку'
             new_caption = f'''
     *Заявка на продажу USDT #{db_id.id}*
     Банк: *{db_id.bank}*
@@ -224,7 +224,7 @@ def action(call):
 
     elif call.data == 'confirm_buy':
         markup = types.ReplyKeyboardRemove()
-        text = 'Оплатите пожалуйста USDT TRC20 на адресс, что я отправлю ниже и подтвердите после отправки⏬'
+        text = 'Оплатите пожалуйста USDT TRC20 на адрес, что я отправлю ниже и подтвердите после отправки👇'
         bot.delete_message(chat_id=call.message.chat.id,  message_id=call.message.message_id)
         bot.send_message(call.message.chat.id, text, reply_markup=markup)
         requisites_usdt(call.message)
@@ -334,7 +334,7 @@ def admin_panel(message):
 def reject_reason_sell(message, reason):
     with Session() as session:
         applications = session.query(ApplicationsSell).filter(ApplicationsSell.id==reason).first()
-        text = f'К сожалению что-то пошло не так. Комментарий от админа👇: <b>{message.text}</b>. Свяжитесь с @manager_ex4 если у вас возникли дополнительные вопросы. Нажмите на /start, если хотите продолжить операцию'
+        text = f'К сожалению что-то пошло не так. Комментарий от админа👉: <b>{message.text}</b>. Свяжитесь с @manager_ex4 если у вас возникли дополнительные вопросы. Нажмите на /start, если хотите продолжить операцию'
         bot.send_message(applications.user_id, text, parse_mode='html')
         session.delete(applications)
         session.commit()
@@ -343,7 +343,7 @@ def reject_reason_sell(message, reason):
 def reject_reason_buy(message, reason):
     with Session() as session:
         applications = session.query(ApplicationsBuy).filter(ApplicationsBuy.id==reason).first()
-        text = f'К сожалению что-то пошло не так. Комментарий от админа👇: <b>{message.text}</b>. Свяжитесь с @manager_ex4 если у вас возникли дополнительные вопросы. Нажмите на /start, если хотите продолжить операцию'
+        text = f'К сожалению что-то пошло не так. Комментарий от админа👉: <b>{message.text}</b>. Свяжитесь с @manager_ex4 если у вас возникли дополнительные вопросы. Нажмите на /start, если хотите продолжить операцию'
         bot.send_message(applications.user_id, text, parse_mode='html')
         session.delete(applications)
         session.commit()
@@ -447,7 +447,7 @@ def handle_uah(message, id_application):
             parse_file.update(order_chat_ids)
             with open('order_sell_chat_id.json', 'w') as f:
                 json.dump(parse_file, f)
-        bot.send_message(message.chat.id, f'Пожалуйста, ожидайте подтверждение транзакции. ID этой сделки: #{create_application.id}')
+        bot.send_message(message.chat.id, f'Пожалуйста, ожидайте подтверждения транзакции. ID этой сделки: #{create_application.id}')
     else:
         bot.send_message(message.chat.id, 'Пожалуйста, отправьте *фотографию* квитанции об переводе средств', parse_mode='Markdown')
         bot.register_next_step_handler(message, handle_uah)
@@ -558,7 +558,7 @@ def handle_txid(message, id_application):
             parse_file.update(order_chat_ids)
             with open('order_buy_chat_id.json', 'w') as f:
                 json.dump(parse_file, f)
-    bot.send_message(message.chat.id, 'Пожалуйста, ожидайте подтверждение транзакции')
+    bot.send_message(message.chat.id, 'Пожалуйста, ожидайте подтверждени транзакции')
 
 #Функция собирающая данные за день в гугл таблицу
 def data_upload():
