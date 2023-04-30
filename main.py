@@ -10,7 +10,7 @@ from models import Users, UserHistory, ApplicationsSell, ApplicationsBuy, Base, 
 from random import randint
 from telebot import types
 
-bot = telebot.TeleBot('6250800326:AAEgBf4F8ET3UKDVvajZKI6tlRHEihMWP3Q')
+bot = telebot.TeleBot('6004733986:AAHyD9Y6n-Ildh1-BxKN7I2w23W_TJS3NRk')
 gc = gspread.service_account(filename='exchange-384915-7fec015fbe08.json')
 engine = sqlalchemy.create_engine('postgresql+psycopg2://jgsqklcsypqoky:091e08d9f3b9b038b1c8b1662a34b2bed42c52d2fc6baf6f6809f0a63712ca7b@ec2-3-248-141-201.eu-west-1.compute.amazonaws.com:5432/d6l089hfn0o91n')
 Session = sqlalchemy.orm.sessionmaker(bind=engine)
@@ -19,7 +19,7 @@ banks_sell_calldata = {'monobank_sell': 'Монобанк', 'privatbank_sell': '
 banks_buy_calldata = {'monobank_buy': 'Монобанк', 'privatbank_buy': 'ПриватБанк',  'pumb_buy': 'ПУМБ', 'abank_buy': 'А-Банк', 'otp_buy': 'ОТП','alpha_buy': 'Альфа'}
 sh = gc.open('Ресурсы для бота')
 
-admins_chat_id = ['595071163']
+admins_chat_id = ['595071163', '5518462737']
 
 Base.metadata.create_all(engine)
 
@@ -82,9 +82,9 @@ def action(call):
                 user_bank = types.InlineKeyboardButton(bank_key, callback_data=bank_value)
                 markup.add(user_bank)
 
-        back = types.InlineKeyboardButton('⬅️Назад', callback_data='back')
+        back = types.InlineKeyboardButton('⬅️Назад', callback_data='sell_btn')
         markup.add(back)
-        text = 'Выберите банк, которым вы хотите воспользоваться' 
+        text = 'Выберите банк, которым вы хотите воспользоваться'
         bot.edit_message_text(text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
 
     elif call.data in ['monobank_sell', 'privatbank_sell', 'pumb_sell', 'abank_sell', 'otp_sell', 'alpha_sell']:
@@ -95,7 +95,7 @@ def action(call):
             session.commit()
             if last_choice.last_trc20_wallet:
                 markup.add(types.KeyboardButton(last_choice.last_trc20_wallet))
-            text = 'Укажите, пожалуйста, адрес USDT TRC20, на который мы должны будем отправить средства.'
+            text = 'Оплатите пожалуйста USDT TRC20 на адрес, что я отправлю ниже и подтвердите после отправки👇'
             bot.delete_message(call.message.chat.id, call.message.message_id)
             bot.send_message(call.message.chat.id, text, reply_markup=markup)
             bot.register_next_step_handler(call.message, user_wallet)
@@ -120,12 +120,12 @@ def action(call):
             last_request_uah = user_history.last_request_uah.replace(',', '.')
             exchange_rate = sh.sheet1.get('B2')[0][0].replace(',', '.')
             text = f'''
-    *Заявка на продажу USDT #{id_application}*
-    Банк: *{banks_sell_calldata.get(user_history.last_bank)}*
-    Кошелёк: `{user_history.last_trc20_wallet}`
-    Курс: *{sh.sheet1.get('B2')[0][0]}*
-    Сумма в UAH для получения: *{user_history.last_request_uah}*.
-    Количевство USDT для отправки: *{round(float(last_request_uah) / float(exchange_rate), 2)}*
+*Заявка на продажу USDT #{id_application}*
+Банк: *{banks_sell_calldata.get(user_history.last_bank)}*
+Кошелёк: `{user_history.last_trc20_wallet}`
+Курс: *{sh.sheet1.get('B2')[0][0]}*
+Сумма в UAH для получения: *{user_history.last_request_uah}*.
+Количевство USDT для отправки: *{round(float(last_request_uah) / float(exchange_rate), 2)}*
         '''
             for admin_chat_id in admins_chat_id:
                 bot.send_message(admin_chat_id, text, parse_mode='Markdown')
@@ -134,15 +134,15 @@ def action(call):
     elif call.data[:23] == 'agree_transactions_sell':
         with Session() as session:
             db_id = session.query(ApplicationsSell).filter(ApplicationsSell.id==call.data[23:]).first()
-            text = 'Средства были отправлены вам на кошелёк. Обычно они поступают в течении 2-5 минут. Спасибо за выбор нашего сервиса🤙\nНажмите на /start, чтобы создать новую заявку'
+            text = 'Средства были отправлены вам на кошелёк. Обычно они поступают в течении 2-5 минут. Спасибо за выбор нашего сервиса🤙./nНажмите на /start, чтобы создать новую заявку'
             new_caption = f'''
-    *Заявка на продажу USDT #{db_id.id}*
-    Банк: *{db_id.bank}*
-    Кошелёк: `{db_id.wallet}`
-    Курс: *{db_id.usdt_rate}*
-    Сумма в UAH для получения: *{db_id.uah_amount}*
-    Количевство USDT для отправки: *{db_id.usdt_amount}*
-    \n\n*ЗАЯВКА ПОДТВЕРЖДЕНА* 
+*Заявка на продажу USDT #{db_id.id}*
+Банк: *{db_id.bank}*
+Кошелёк: `{db_id.wallet}`
+Курс: *{db_id.usdt_rate}*
+Сумма в UAH для получения: *{db_id.uah_amount}*
+Количевство USDT для отправки: *{db_id.usdt_amount}*
+\n\n*ЗАЯВКА ПОДТВЕРЖДЕНА* 
         '''
             with open('order_sell_chat_id.json', 'r') as f:
                 data = json.load(f)
@@ -162,13 +162,13 @@ def action(call):
             text = f'Опишите причину отказа заявки №{call.data[24:]}'
             bot.send_message(call.message.chat.id, text)
             new_caption = f'''
-    *Заявка на продажу USDT #{db_id.id}*
-    Банк: *{db_id.bank}*
-    Кошелёк: `{db_id.wallet}`
-    Курс: *{db_id.usdt_rate}*
-    Сумма в UAH для получения: *{db_id.uah_amount}*
-    Количевство USDT для отправки: *{db_id.usdt_amount}*
-    \n\n*ЗАЯВКА ОТКЛОНЕНА* 
+*Заявка на продажу USDT #{db_id.id}*
+Банк: *{db_id.bank}*
+Кошелёк: `{db_id.wallet}`
+Курс: *{db_id.usdt_rate}*
+Сумма в UAH для получения: *{db_id.uah_amount}*
+Количевство USDT для отправки: *{db_id.usdt_amount}*
+\n\n*ЗАЯВКА ОТКЛОНЕНА* 
         '''
             with open('order_sell_chat_id.json', 'r') as f:
                 data = json.load(f)
@@ -204,7 +204,7 @@ def action(call):
             user_bank = types.InlineKeyboardButton(bank_key, callback_data=bank_value)
             markup.add(user_bank)
 
-        back = types.InlineKeyboardButton('⬅️Назад', callback_data='back')
+        back = types.InlineKeyboardButton('⬅️Назад', callback_data='buy_btn')
         markup.add(back)
         text = 'Выберите банк, на который вы хотите получить UAH'
         bot.edit_message_text(text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)    
@@ -224,7 +224,7 @@ def action(call):
 
     elif call.data == 'confirm_buy':
         markup = types.ReplyKeyboardRemove()
-        text = 'Оплатите пожалуйста USDT TRC20 на адрес, что я отправлю ниже и подтвердите после отправки👇'
+        text = 'Оплатите пожалуйста USDT TRC20 на адресс, что я отправлю ниже и подтвердите после отправки⏬'
         bot.delete_message(chat_id=call.message.chat.id,  message_id=call.message.message_id)
         bot.send_message(call.message.chat.id, text, reply_markup=markup)
         requisites_usdt(call.message)
@@ -243,12 +243,12 @@ def action(call):
             last_request_usdt = user_history.last_request_usdt.replace(',', '.')
             exchange_rate = sh.sheet1.get('A2')[0][0].replace(',', '.')
             text = f'''
-    *Заявка на покупку USDT #{id_application}*
-    Банк: *{banks_buy_calldata.get(user_history.last_bank)}*
-    Счёт получателя: `{user_history.last_card}`
-    Курс: *{sh.sheet1.get('A2')[0][0]}*
-    Количевство для получения в USDT: *{user_history.last_request_usdt}*
-    Итоговая сумма для отправки в UAH: *{round(float(exchange_rate) * float(last_request_usdt), 2)}*
+*Заявка на покупку USDT #{id_application}*
+Банк: *{banks_buy_calldata.get(user_history.last_bank)}*
+Счёт получателя: `{user_history.last_card}`
+Курс: *{sh.sheet1.get('A2')[0][0]}*
+Количевство для получения в USDT: *{user_history.last_request_usdt}*
+Итоговая сумма для отправки в UAH: *{round(float(exchange_rate) * float(last_request_usdt), 2)}*
         '''
             for admin_chat_id in admins_chat_id:
                 bot.send_message(admin_chat_id, text, parse_mode='Markdown')
@@ -257,16 +257,16 @@ def action(call):
     elif call.data[:22] == 'agree_transactions_buy':
         with Session() as session:
             db_id = session.query(ApplicationsBuy).filter(ApplicationsBuy.id==call.data[22:]).first()
-            text = 'Средства были отправлены вам на кошелёк. Спасибо за выбор нашего сервиса. Спасибо за выбор нашего сервиса🤙\nНажмите на /start, чтобы создать новую заявку'
+            text = 'Средства были отправлены вам на кошелёк. Спасибо за выбор нашего сервиса. Нажмите на /start, если хотите продолжить операцию'
             new_text = f'''
-    *Заявка на покупку USDT #{db_id.id}*
-    Банк: *{db_id.bank}*
-    Кошелёк: `{db_id.credit_card}`
-    Курс: *{db_id.usdt_rate}*
-    Сумма в UAH для получения: *{db_id.usdt_amount}*
-    Количевство USDT для отправки: *{db_id.uah_summa}*
-    TXid сделки: *{db_id.txid}*
-    \n\n*ЗАЯВКА ПОДТВЕРЖДЕНА* 
+*Заявка на покупку USDT #{db_id.id}*
+Банк: *{db_id.bank}*
+Кошелёк: `{db_id.credit_card}`
+Курс: *{db_id.usdt_rate}*
+Сумма в UAH для получения: *{db_id.usdt_amount}*
+Количевство USDT для отправки: *{db_id.uah_summa}*
+TXid сделки: *{db_id.txid}*
+\n\n*ЗАЯВКА ПОДТВЕРЖДЕНА* 
         '''
             with open('order_buy_chat_id.json', 'r') as f:
                 data = json.load(f)
@@ -285,14 +285,14 @@ def action(call):
             db_id = session.query(ApplicationsBuy).filter(ApplicationsBuy.id==call.data[23:]).first()
             text = f'Опишите причину отказа заявки №{call.data[23:]}'
             new_text = f'''
-    *Заявка на покупку USDT #{db_id.id}*
-    Банк: *{db_id.bank}*
-    Кошелёк: `{db_id.credit_card}`
-    Курс: *{db_id.usdt_rate}*
-    Сумма в UAH для получения: *{db_id.usdt_amount}*
-    Количевство USDT для отправки: *{db_id.uah_summa}*
-    TXid сделки: *{db_id.txid}*
-    \n\n*ЗАЯВКА ОТКЛОНЕНА* 
+*Заявка на покупку USDT #{db_id.id}*
+Банк: *{db_id.bank}*
+Кошелёк: `{db_id.credit_card}`
+Курс: *{db_id.usdt_rate}*
+Сумма в UAH для получения: *{db_id.usdt_amount}*
+Количевство USDT для отправки: *{db_id.uah_summa}*
+TXid сделки: *{db_id.txid}*
+\n\n*ЗАЯВКА ОТКЛОНЕНА* 
         '''
             with open('order_buy_chat_id.json', 'r') as f:
                 data = json.load(f)
@@ -334,7 +334,7 @@ def admin_panel(message):
 def reject_reason_sell(message, reason):
     with Session() as session:
         applications = session.query(ApplicationsSell).filter(ApplicationsSell.id==reason).first()
-        text = f'К сожалению что-то пошло не так. Комментарий от админа👉: <b>{message.text}</b>. Свяжитесь с @manager_ex4 если у вас возникли дополнительные вопросы. Спасибо за выбор нашего сервиса🤙\nНажмите на /start, чтобы создать новую заявку'
+        text = f'К сожалению что-то пошло не так. Комментарий от админа👉: <b>{message.text}</b>. Свяжитесь с @manager_ex4 если у вас возникли дополнительные вопросы. Нажмите на /start, если хотите продолжить операцию'
         bot.send_message(applications.user_id, text, parse_mode='html')
         session.delete(applications)
         session.commit()
@@ -343,7 +343,7 @@ def reject_reason_sell(message, reason):
 def reject_reason_buy(message, reason):
     with Session() as session:
         applications = session.query(ApplicationsBuy).filter(ApplicationsBuy.id==reason).first()
-        text = f'К сожалению что-то пошло не так. Комментарий от админа👉: <b>{message.text}</b>. Свяжитесь с @manager_ex4 если у вас возникли дополнительные вопросы. Спасибо за выбор нашего сервиса🤙\nНажмите на /start, чтобы создать новую заявку'
+        text = f'К сожалению что-то пошло не так. Комментарий от админа👉: <b>{message.text}</b>. Свяжитесь с @manager_ex4 если у вас возникли дополнительные вопросы. Нажмите на /start, если хотите продолжить операцию'
         bot.send_message(applications.user_id, text, parse_mode='html')
         session.delete(applications)
         session.commit()
@@ -399,8 +399,7 @@ def requisites_uah(message):
 
     markup = types.InlineKeyboardMarkup(row_width=1)
     confirmed_transfer = types.InlineKeyboardButton('Я отправил деньги', callback_data='confirmed_uah_transfer')
-    cancel = types.InlineKeyboardButton('⬅️Назад', callback_data='back')
-    markup.add(confirmed_transfer, cancel)
+    markup.add(confirmed_transfer)
     text = f'Номер карты: `{sh.get_worksheet(2).get(wallets.get(user_history.last_bank))[0][0]}`\nСумма: {user_history.last_request_uah}'
     bot.send_message(message.chat.id, text, reply_markup=markup, parse_mode='Markdown')
 
@@ -426,12 +425,12 @@ def handle_uah(message, id_application):
             session.add(create_application)
             session.commit()
             text = f'''
-    *Заявка на продажу USDT #{create_application.id}*
-    Банк: *{create_application.bank}*
-    Кошелёк: `{user_history.last_trc20_wallet}`
-    Курс: *{create_application.usdt_rate}*
-    Сумма в UAH для получения: *{user_history.last_request_uah}*
-    Количевство USDT для отправки: *{create_application.usdt_amount}*
+*Заявка на продажу USDT #{create_application.id}*
+Банк: *{create_application.bank}*
+Кошелёк: `{user_history.last_trc20_wallet}`
+Курс: *{create_application.usdt_rate}*
+Сумма в UAH для получения: *{user_history.last_request_uah}*
+Количевство USDT для отправки: *{create_application.usdt_amount}*
         '''
         markup = types.InlineKeyboardMarkup(row_width=1)
         agree_transactions = types.InlineKeyboardButton('Подтверждаю обмен', callback_data=f'agree_transactions_sell{create_application.id}')
@@ -489,12 +488,12 @@ def send_request_confirmation_buy(message):
         cancel = types.InlineKeyboardButton('Отменить', callback_data='back')
         markup.add(confirm, cancel)
         confirmation_text = f'''
-    Подтвердите вашу заявку
-    Банк: {banks_buy_calldata.get(user_history.last_bank)}
-    Реквизиты получателя: {user_history.last_card}
-    Курс: {exchange_rate}
-    Количевство USDT для продажи: {last_request_usdt}
-    Сумма в UAH для получения: {round(float(exchange_rate) * float(last_request_usdt), 2)}'''
+Подтвердите вашу заявку
+Банк: {banks_buy_calldata.get(user_history.last_bank)}
+Реквизиты получателя: {user_history.last_card}
+Курс: {exchange_rate}
+Количевство USDT для продажи: {last_request_usdt}
+Сумма в UAH для получения: {round(float(exchange_rate) * float(last_request_usdt), 2)}'''
         if message.text.isdigit():
             bot.send_message(message.chat.id, confirmation_text, reply_markup=markup)
         elif text.count('.') == 1 and all(c.isdigit() for c in text.replace('.', '', 1)):
@@ -509,8 +508,7 @@ def requisites_usdt(message):
         user_history = session.query(UserHistory).filter(UserHistory.id==message.chat.id).first()
         markup = types.InlineKeyboardMarkup(row_width=1)
         confirmed_transfer = types.InlineKeyboardButton('Я отправил деньги', callback_data='confirmed_usdt_transfer')
-        cancel = types.InlineKeyboardButton('⬅️Назад', callback_data='back')
-        markup.add(confirmed_transfer, cancel)
+        markup.add(confirmed_transfer)
         text = f'Адресс USDT кошелька: `{sh.get_worksheet(1).get("B1")[0][0]}`\nСумма: {user_history.last_request_usdt}'
         bot.send_message(message.chat.id, text, reply_markup=markup, parse_mode='Markdown')
 
@@ -536,13 +534,13 @@ def handle_txid(message, id_application):
         session.add(create_application)
         session.commit()
         text = f'''
-    *Заявка на покупку USDT #{create_application.id}*
-    Банк: *{create_application.bank}*
-    Счёт получателя: `{create_application.credit_card}`
-    Курс: *{create_application.usdt_rate}*
-    Количевство для получения в USDT: *{create_application.usdt_amount}*
-    Итоговая сумма для отправки в UAH: *{create_application.uah_summa}*
-    TXid сделки: *{create_application.txid}*
+*Заявка на покупку USDT #{create_application.id}*
+Банк: *{create_application.bank}*
+Счёт получателя: `{create_application.credit_card}`
+Курс: *{create_application.usdt_rate}*
+Количевство для получения в USDT: *{create_application.usdt_amount}*
+Итоговая сумма для отправки в UAH: *{create_application.uah_summa}*
+TXid сделки: *{create_application.txid}*
     '''
         markup = types.InlineKeyboardMarkup(row_width=1)
         agree_transactions = types.InlineKeyboardButton('Подтверждаю обмен', callback_data=f'agree_transactions_buy{create_application.id}')
@@ -558,11 +556,11 @@ def handle_txid(message, id_application):
             parse_file.update(order_chat_ids)
             with open('order_buy_chat_id.json', 'w') as f:
                 json.dump(parse_file, f)
-    bot.send_message(message.chat.id, 'Пожалуйста, ожидайте подтверждени транзакции')
+        bot.send_message(message.chat.id, f'Пожалуйста, ожидайте подтверждения транзакции. ID этой сделки: #{create_application.id}')
 
 #Функция собирающая данные за день в гугл таблицу
 def data_upload():
-    # Фильтрация всех заявок на покупку
+    # Фильтрация всех заявок на продажу
     with Session() as session:
         todays_sell_applications = session.query(ApplicationsSell).filter(
             ApplicationsSell.data_created==datetime.now().strftime('%d.%m.%Y'),
@@ -585,7 +583,7 @@ def data_upload():
 
         worksheet.update(cell_range, data)
 
-        # Фильтрация всех заявок на продажу
+        # Фильтрация всех заявок на покупку
         todays_buy_applications = session.query(ApplicationsBuy).filter(
             ApplicationsBuy.data_created==datetime.now().strftime('%d.%m.%Y'),
             ApplicationsBuy.status=='approved').all()
