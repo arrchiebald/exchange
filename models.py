@@ -18,9 +18,11 @@ class UserHistory(Base):
 
     id = Column(BigInteger, primary_key=True)
     last_trc20_wallet = Column(String(100))
-    last_request_uah = Column(String(100))
+    last_request_uah_buy = Column(String(100))
+    last_request_uah_sell = Column(String(100))
     last_card = Column(String(100))
-    last_request_usdt = Column(String(100))
+    last_request_usdt_buy = Column(String(100))
+    last_request_usdt_sell = Column(String(100))
     last_bank = Column(String(100))
 
 class ApplicationsSell(Base):
