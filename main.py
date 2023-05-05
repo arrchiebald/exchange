@@ -4,13 +4,14 @@ import sqlalchemy
 import schedule
 import json
 from time import sleep
-from threading import Thread
+from threading import Thread, Timer
 from datetime import datetime
 from models import Users, UserHistory, ApplicationsSell, ApplicationsBuy, Base, Session
 from random import randint
 from telebot import types
 
 bot = telebot.TeleBot('6250800326:AAEgBf4F8ET3UKDVvajZKI6tlRHEihMWP3Q')
+н = '6250800326:AAEgBf4F8ET3UKDVvajZKI6tlRHEihMWP3Q'
 gc = gspread.service_account(filename='exchange-384915-7fec015fbe08.json')
 engine = sqlalchemy.create_engine('postgresql+psycopg2://jgsqklcsypqoky:091e08d9f3b9b038b1c8b1662a34b2bed42c52d2fc6baf6f6809f0a63712ca7b@ec2-3-248-141-201.eu-west-1.compute.amazonaws.com:5432/d6l089hfn0o91n')
 Session = sqlalchemy.orm.sessionmaker(bind=engine)
@@ -22,8 +23,10 @@ sh = gc.open('Ресурсы для бота')
 admins_chat_id = ['5518462737']
 users_status_sell = []
 user_confirmations_status_sell = []
+admins_message_id_sell = []
 users_status_buy = []
 user_confirmations_status_buy = []
+admins_message_id_buy = []
 
 Base.metadata.create_all(engine)
 
@@ -145,19 +148,62 @@ def action(call):
                 while id_application not in application_sell_list:
                     id_application = randint(1000000, 9999999)
             user_history = session.query(UserHistory).filter(UserHistory.id==call.message.chat.id).first()
-            last_request_uah = user_history.last_request_uah_sell.replace(',', '.')
-            exchange_rate = sh.sheet1.get('B2')[0][0].replace(',', '.')
+            create_application = ApplicationsSell(
+                id=id_application,
+                user_id=call.message.chat.id,
+                bank=banks_sell_calldata.get(user_history.last_bank),
+                usdt_rate=sh.sheet1.get('B2')[0][0],
+                wallet=user_history.last_trc20_wallet,
+                uah_amount=user_history.last_request_uah_sell,
+                usdt_amount=user_history.last_request_usdt_sell,
+                status='in process',
+            )
+            session.add(create_application)
+            session.commit()
             text = f'''
 *Заявка на продажу USDT #{id_application}*
-Банк: *{banks_sell_calldata.get(user_history.last_bank)}*
-Кошелёк: `{user_history.last_trc20_wallet}`
-Курс: *{sh.sheet1.get('B2')[0][0]}*
-Сумма в UAH для получения: *{user_history.last_request_uah_sell}*.
-Количевство USDT для отправки: *{round(float(last_request_uah) / float(exchange_rate), 2)}*
+Банк: *{create_application.bank}*
+Кошелёк: `{create_application.wallet}`
+Курс: *{create_application.usdt_rate}*
+Сумма в UAH для получения: *{create_application.uah_amount}*.
+Количевство USDT для отправки: *{create_application.usdt_amount}*
         '''
+            mes_ids = ''
             for admin_chat_id in admins_chat_id:
-                bot.send_message(admin_chat_id, text, parse_mode='Markdown')
-            bot.register_next_step_handler(call.message, handle_uah, id_application=id_application)
+                admin_mes = bot.send_message(admin_chat_id, text, parse_mode='Markdown')
+                mes_ids += str(admin_mes.message_id)
+            admins_message_id_sell.append({str(id_application): f'{mes_ids} '})
+
+            def cancel_handler(mess):
+                with Session() as session:
+                    application = session.query(ApplicationsSell).filter(ApplicationsSell.id==id_application).first()
+                    bot.clear_step_handler_by_chat_id(chat_id=mess.chat.id)
+                    markup = types.ReplyKeyboardRemove()
+                    bot.send_message(mess.chat.id, 'Время ожидания вышло', reply_markup=markup)
+                    confirmation_text = f'''
+*Заявка на продажу USDT #{application.id}*
+Банк: *{application.bank}*
+Кошелёк: `{application.wallet}`
+Курс: *{application.usdt_rate}*
+Сумма в UAH для получения: *{application.uah_amount}*.
+Количевство USDT для отправки: *{application.usdt_amount}*
+\n\n*ВРЕМЯ ОЖИДАНИЕ ЗАКОНЧИЛОСЬ*
+'''
+                    for adm_mes_id in admins_message_id_sell:
+                        if str(id_application) in adm_mes_id:
+                            chat_ids = list(adm_mes_id.values())[0].split()
+                            mes_id_index = admins_message_id_sell.index(adm_mes_id)
+                            admins_message_id_sell.pop(mes_id_index)
+                    for admin in range(len(admins_chat_id)):
+                        bot.edit_message_text(chat_id=admins_chat_id[admin], message_id=chat_ids[admin], text=confirmation_text, parse_mode='Markdown')
+                    session.delete(application)
+                    session.commit()
+                    select_action(mess)
+
+            timer = Timer(30.0, cancel_handler, args=[call.message])
+            timer.start()
+
+            bot.register_next_step_handler(call.message, handle_uah, id_application=id_application, timer=timer)
 
     elif call.data[:23] == 'agree_transactions_sell':
         with Session() as session:
@@ -292,19 +338,62 @@ def action(call):
                 while id_application not in application_buy_list:
                     id_application = randint(1000000, 9999999)
             user_history = session.query(UserHistory).filter(UserHistory.id==call.message.chat.id).first()
-            last_request_usdt = user_history.last_request_usdt_buy.replace(',', '.')
-            exchange_rate = sh.sheet1.get('A2')[0][0].replace(',', '.')
-            text = f'''
+            create_application = ApplicationsBuy(
+                id=id_application,
+                user_id=call.message.chat.id,
+                bank=banks_buy_calldata.get(user_history.last_bank),
+                usdt_rate=sh.sheet1.get('A2')[0][0].replace(',', '.'),
+                credit_card=user_history.last_card,
+                usdt_amount=user_history.last_request_usdt_buy,
+                uah_summa=user_history.last_request_uah_buy,
+                status='in process'
+            )
+            session.add(create_application)
+            session.commit()
+            text = f''' 
 *Заявка на покупку USDT #{id_application}*
-Банк: *{banks_buy_calldata.get(user_history.last_bank)}*
-Счёт получателя: `{user_history.last_card}`
-Курс: *{sh.sheet1.get('A2')[0][0]}*
-Количевство для получения в USDT: *{last_request_usdt}*
-Итоговая сумма для отправки в UAH: *{round(float(exchange_rate) * float(last_request_usdt), 2)}*
+Банк: *{create_application.bank}*
+Счёт получателя: `{create_application.credit_card}`
+Курс: *{create_application.usdt_rate}*
+Количевство для получения в USDT: *{create_application.usdt_amount}*
+Итоговая сумма для отправки в UAH: *{create_application.uah_summa}*
         '''
+            mes_ids = ''
             for admin_chat_id in admins_chat_id:
-                bot.send_message(admin_chat_id,  text, parse_mode='Markdown')
-            bot.register_next_step_handler(call.message, handle_txid, id_application=id_application)
+                admin_mes = bot.send_message(admin_chat_id, text, parse_mode='Markdown')
+                mes_ids += str(admin_mes.message_id)
+            admins_message_id_buy.append({str(id_application): f'{mes_ids} '})
+            
+            def cancel_handler(mess):
+                with Session() as session:
+                    bot.clear_step_handler_by_chat_id(chat_id=mess.chat.id)
+                    application = session.query(ApplicationsBuy).filter(ApplicationsBuy.id==id_application).first()
+                    markup = types.ReplyKeyboardRemove()
+                    bot.send_message(mess.chat.id, 'Время ожидания вышло', reply_markup=markup)
+                    сonfirmation_text = f''' 
+*Заявка на покупку USDT #{id_application}*
+Банк: *{application.bank}*
+Счёт получателя: `{application.credit_card}`
+Курс: *{application.usdt_rate}*
+Количевство для получения в USDT: *{application.usdt_amount}*
+Итоговая сумма для отправки в UAH: *{application.uah_summa}*
+\n\n*ВРЕМЯ ОЖИДАНИЕ ЗАКОНЧИЛОСЬ*
+        '''
+                    for adm_mes_id in admins_message_id_buy:
+                        if str(id_application) in adm_mes_id:
+                            chat_ids = list(adm_mes_id.values())[0].split()
+                            mes_id_index = admins_message_id_buy.index(adm_mes_id)
+                            admins_message_id_buy.pop(mes_id_index)
+                    for admin in range(len(admins_chat_id)):
+                        bot.edit_message_text(chat_id=admins_chat_id[admin], message_id=chat_ids[admin], text=сonfirmation_text, parse_mode='Markdown')
+                    session.delete(application)
+                    session.commit()
+                    select_action(mess)
+
+            timer = Timer(30.0, cancel_handler, args=(call.message, ))
+            timer.start()
+
+            bot.register_next_step_handler(call.message, handle_txid, id_application=id_application, timer=timer)
 
     elif call.data[:22] == 'agree_transactions_buy':
         with Session() as session:
@@ -555,49 +644,37 @@ def requisites_uah(message):
         thr.start()
 
 
-def handle_uah(message, id_application):
+def handle_uah(message, id_application, timer):
+    timer.cancel()
     if message.photo:
         with Session() as session:
-            user_history = session.query(UserHistory).filter(UserHistory.id==message.chat.id).first()
-            exchange_rate = sh.sheet1.get('B2')[0][0].replace(',', '.')
-            last_request_uah = user_history.last_request_uah_sell.replace(',', '.')
-            create_application = ApplicationsSell(
-                id=id_application,
-                user_id=message.chat.id,
-                bank=banks_sell_calldata.get(user_history.last_bank),
-                usdt_rate=exchange_rate,
-                wallet=user_history.last_trc20_wallet,
-                uah_amount=last_request_uah,
-                usdt_amount=round(float(last_request_uah) / float(exchange_rate), 2),
-                data_created=datetime.now().strftime('%d.%m.%Y'),
-                time_created = datetime.now().strftime('%H:%M:%S'),
-                status='in process'
-            )
-            session.add(create_application)
+            application = session.query(ApplicationsSell).filter(ApplicationsSell.id==id_application).first()
+            application.data_created = datetime.now().strftime('%d.%m.%Y')
+            application.time_created = datetime.now().strftime('%H:%M:%S')
             session.commit()
             text = f'''
-*Заявка на продажу USDT #{create_application.id}*
-Банк: *{create_application.bank}*
-Кошелёк: `{create_application.wallet}`
-Курс: *{create_application.usdt_rate}*
-Количевство для получения USDT: *{create_application.uah_amount}*
-Итоговая сумма для отправки в UAH: *{create_application.usdt_amount}*
+*Заявка на продажу USDT #{application.id}*
+Банк: *{application.bank}*
+Кошелёк: `{application.wallet}`
+Курс: *{application.usdt_rate}*
+Количевство для получения USDT: *{application.uah_amount}*
+Итоговая сумма для отправки в UAH: *{application.usdt_amount}*
         '''
         markup = types.InlineKeyboardMarkup(row_width=1)
-        agree_transactions = types.InlineKeyboardButton('Подтверждаю обмен', callback_data=f'agree_transactions_sell{create_application.id}')
-        reject_transactions = types.InlineKeyboardButton('Отклоняю обмен', callback_data=f'reject_transactions_sell{create_application.id}')
+        agree_transactions = types.InlineKeyboardButton('Подтверждаю обмен', callback_data=f'agree_transactions_sell{application.id}')
+        reject_transactions = types.InlineKeyboardButton('Отклоняю обмен', callback_data=f'reject_transactions_sell{application.id}')
         markup.add(agree_transactions, reject_transactions)
         admins_id = ''
         for admin_chat_id in admins_chat_id:
             admin_message = bot.send_photo(admin_chat_id, message.photo[-1].file_id, caption=text, reply_markup=markup, parse_mode='Markdown')
             admins_id += f'{admin_message.message_id} '
-        order_chat_ids = {str(create_application.id): admins_id}
+        order_chat_ids = {str(application.id): admins_id}
         with open('order_sell_chat_id.json', 'r') as f:
             parse_file = json.loads(f.read())
             parse_file.update(order_chat_ids)
             with open('order_sell_chat_id.json', 'w') as f:
                 json.dump(parse_file, f)
-        text = f'Пожалуйста, ожидайте подтверждения транзакции. ID этой сделки: #{create_application.id}.\nОбычно подтверждение заявки происходит в течении 15 минут.'
+        text = f'Пожалуйста, ожидайте подтверждения транзакции. ID этой сделки: #{application.id}.\nОбычно подтверждение заявки происходит в течении 15 минут.'
         bot.send_message(message.chat.id, text)
     elif message.text == '/start':
         markup = types.ReplyKeyboardRemove()
@@ -606,7 +683,7 @@ def handle_uah(message, id_application):
         return
     else:
         bot.send_message(message.chat.id, 'Пожалуйста, отправьте скриншот квитанции об переводе средств', parse_mode='Markdown')
-        bot.register_next_step_handler(message, handle_uah, id_application=id_application)
+        bot.register_next_step_handler(message, handle_uah, id_application=id_application, timer=timer)
 
 # Продажа USDT
 
@@ -649,6 +726,7 @@ def enter_usdt_buy(message):
 def enter_uah_buy(message):
     with Session() as session:
         if ' ' not in message.text:
+            message.auto_delete_timer
             user_history = session.query(UserHistory).filter(UserHistory.id==message.chat.id).first()
             edited_text = message.text.replace(',', '.')
             exchange_rate = sh.sheet1.get('A2')[0][0].replace(',', '.')
@@ -770,55 +848,43 @@ def requisites_usdt(message):
         thr.start()
 
 
-def handle_txid(message, id_application):
+def handle_txid(message, id_application, timer):
+    timer.cancel()
     with Session() as session:
         if message.text == '/start':
             markup = types.ReplyKeyboardRemove()
             bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
             select_action(message)
             return
-        user_history = session.query(UserHistory).filter(UserHistory.id==message.chat.id).first()
-        exchange_rate = sh.sheet1.get('A2')[0][0].replace(',', '.')
-        last_request_usdt = user_history.last_request_usdt_buy.replace(',', '.')
-        create_application = ApplicationsBuy(
-            id=id_application,
-            user_id=message.chat.id,
-            txid=message.text,
-            bank=banks_buy_calldata.get(user_history.last_bank),
-            usdt_rate=exchange_rate,
-            credit_card=user_history.last_card,
-            usdt_amount=last_request_usdt,
-            uah_summa=round(float(exchange_rate) * float(last_request_usdt), 2),
-            data_created=datetime.now().strftime('%d.%m.%Y'),
-            time_created = datetime.now().strftime('%H:%M:%S'),
-            status='in process'
-        )
-        session.add(create_application)
+        application = session.query(ApplicationsBuy).filter(ApplicationsBuy.id==id_application).first()
+        application.txid = message.text
+        application.data_created = datetime.now().strftime('%d.%m.%Y')
+        application.time_created = datetime.now().strftime('%H:%M:%S')
         session.commit()
         text = f'''
-*Заявка на покупку USDT #{create_application.id}*
-Банк: *{create_application.bank}*
-Счёт получателя: `{create_application.credit_card}`
-Курс: *{create_application.usdt_rate}*
-Количевство для получения в USDT: *{create_application.usdt_amount}*
-Итоговая сумма для отправки в UAH: *{create_application.uah_summa}*
-TXid сделки: *{create_application.txid}*
+*Заявка на покупку USDT #{application.id}*
+Банк: *{application.bank}*
+Счёт получателя: `{application.credit_card}`
+Курс: *{application.usdt_rate}*
+Количевство для получения в USDT: *{application.usdt_amount}*
+Итоговая сумма для отправки в UAH: *{application.uah_summa}*
+TXid сделки: *{application.txid}*
     '''
         markup = types.InlineKeyboardMarkup(row_width=1)
-        agree_transactions = types.InlineKeyboardButton('Подтверждаю обмен', callback_data=f'agree_transactions_buy{create_application.id}')
-        reject_transactions = types.InlineKeyboardButton('Отклоняю обмен', callback_data=f'reject_transactions_buy{create_application.id}')
+        agree_transactions = types.InlineKeyboardButton('Подтверждаю обмен', callback_data=f'agree_transactions_buy{application.id}')
+        reject_transactions = types.InlineKeyboardButton('Отклоняю обмен', callback_data=f'reject_transactions_buy{application.id}')
         markup.add(agree_transactions, reject_transactions)
         admins_id = ''
         for admin_chat_id in admins_chat_id:
             a = bot.send_message(admin_chat_id, text, reply_markup=markup, parse_mode='Markdown')
             admins_id += f'{a.message_id} '
-        order_chat_ids = {str(create_application.id): admins_id}
+        order_chat_ids = {str(application.id): admins_id}
         with open('order_buy_chat_id.json', 'r') as f:
             parse_file = json.loads(f.read())
             parse_file.update(order_chat_ids)
             with open('order_buy_chat_id.json', 'w') as f:
                 json.dump(parse_file, f)
-        text = f'Пожалуйста, ожидайте подтверждения транзакции. Обычно подтверждение заявки происходит в течении 15 минут. ID этой сделки: #{create_application.id}'
+        text = f'Пожалуйста, ожидайте подтверждения транзакции. Обычно подтверждение заявки происходит в течении 15 минут. ID этой сделки: #{application.id}'
         bot.send_message(message.chat.id, text)
 
 #Функция собирающая данные за день в гугл таблицу
