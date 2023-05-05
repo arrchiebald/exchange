@@ -3,6 +3,7 @@ import gspread
 import sqlalchemy
 import schedule
 import json
+import pygsheets
 from time import sleep
 from threading import Thread, Timer
 from datetime import datetime
@@ -11,6 +12,9 @@ from random import randint
 from telebot import types
 
 bot = telebot.TeleBot('6250800326:AAEgBf4F8ET3UKDVvajZKI6tlRHEihMWP3Q')
+# bot = telebot.TeleBot('6004733986:AAHyD9Y6n-Ildh1-BxKN7I2w23W_TJS3NRk')
+client = pygsheets.authorize(service_account_file='exchange-384915-7fec015fbe08.json')
+sheet = client.open('Ресурсы для бота')
 gc = gspread.service_account(filename='exchange-384915-7fec015fbe08.json')
 engine = sqlalchemy.create_engine('postgresql+psycopg2://jgsqklcsypqoky:091e08d9f3b9b038b1c8b1662a34b2bed42c52d2fc6baf6f6809f0a63712ca7b@ec2-3-248-141-201.eu-west-1.compute.amazonaws.com:5432/d6l089hfn0o91n')
 Session = sqlalchemy.orm.sessionmaker(bind=engine)
@@ -70,7 +74,7 @@ def action(call):
         ok_btn = types.InlineKeyboardButton('OK', callback_data='ok_sell')
         back_btn = types.InlineKeyboardButton('⬅️Назад', callback_data='back')
         markup.add(ok_btn, back_btn)
-        text = f'Курс на данный момент {sh.sheet1.get("B2")[0][0]} за 1 USDT'
+        text = f'Курс на данный момент {sheet.sheet1.cell("B2").value} за 1 USDT'
         bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
         bot.send_message(call.message.chat.id, text, reply_markup=markup)
 
@@ -170,8 +174,8 @@ def action(call):
             mes_ids = ''
             for admin_chat_id in admins_chat_id:
                 admin_mes = bot.send_message(admin_chat_id, text, parse_mode='Markdown')
-                mes_ids += str(admin_mes.message_id)
-            admins_message_id_sell.append({str(id_application): f'{mes_ids} '})
+                mes_ids += f'{admin_mes.message_id} '
+            admins_message_id_sell.append({str(id_application): mes_ids})
 
             def cancel_handler(mess):
                 with Session() as session:
@@ -186,7 +190,7 @@ def action(call):
 Курс: *{application.usdt_rate}*
 Сумма в UAH для получения: *{application.uah_amount}*.
 Количевство USDT для отправки: *{application.usdt_amount}*
-\n\n*ВРЕМЯ ОЖИДАНИЕ ЗАКОНЧИЛОСЬ*
+\n\n*ВРЕМЯ ОЖИДАНИЕ ВЫШЛО*
 '''
                     for adm_mes_id in admins_message_id_sell:
                         if str(id_application) in adm_mes_id:
@@ -199,7 +203,7 @@ def action(call):
                     session.commit()
                     select_action(mess)
 
-            timer = Timer(30.0, cancel_handler, args=[call.message])
+            timer = Timer(30.0, cancel_handler, args=(call.message, ))
             timer.start()
 
             bot.register_next_step_handler(call.message, handle_uah, id_application=id_application, timer=timer)
@@ -259,7 +263,7 @@ def action(call):
         ok_btn = types.InlineKeyboardButton('OK', callback_data='ok_buy')
         back_btn = types.InlineKeyboardButton('⬅️Назад', callback_data='back')
         markup.add(ok_btn, back_btn)
-        text = f'Курс на данный момент {sh.sheet1.get("A2")[0][0]} за 1 USDT'
+        text = f'Курс на данный момент {sheet.sheet1.cell("A2").value} за 1 USDT'
         bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
         bot.send_message(call.message.chat.id, text, reply_markup=markup)
 
@@ -360,15 +364,15 @@ def action(call):
             mes_ids = ''
             for admin_chat_id in admins_chat_id:
                 admin_mes = bot.send_message(admin_chat_id, text, parse_mode='Markdown')
-                mes_ids += str(admin_mes.message_id)
-            admins_message_id_buy.append({str(id_application): f'{mes_ids} '})
+                mes_ids += f'{admin_mes.message_id} '
+            admins_message_id_buy.append({str(id_application): mes_ids})
             
-            def cancel_handler(mess):
+            def cancel_handler(message):
                 with Session() as session:
-                    bot.clear_step_handler_by_chat_id(chat_id=mess.chat.id)
+                    bot.clear_step_handler_by_chat_id(chat_id=message.chat.id)
                     application = session.query(ApplicationsBuy).filter(ApplicationsBuy.id==id_application).first()
                     markup = types.ReplyKeyboardRemove()
-                    bot.send_message(mess.chat.id, 'Время ожидания вышло', reply_markup=markup)
+                    bot.send_message(message.chat.id, 'Время ожидания вышло', reply_markup=markup)
                     сonfirmation_text = f''' 
 *Заявка на покупку USDT #{id_application}*
 Банк: *{application.bank}*
@@ -376,7 +380,7 @@ def action(call):
 Курс: *{application.usdt_rate}*
 Количевство для получения в USDT: *{application.usdt_amount}*
 Итоговая сумма для отправки в UAH: *{application.uah_summa}*
-\n\n*ВРЕМЯ ОЖИДАНИЕ ЗАКОНЧИЛОСЬ*
+\n\n*ВРЕМЯ ОЖИДАНИЕ ВЫШЛО*
         '''
                     for adm_mes_id in admins_message_id_buy:
                         if str(id_application) in adm_mes_id:
@@ -387,7 +391,7 @@ def action(call):
                         bot.edit_message_text(chat_id=admins_chat_id[admin], message_id=chat_ids[admin], text=сonfirmation_text, parse_mode='Markdown')
                     session.delete(application)
                     session.commit()
-                    select_action(mess)
+                    select_action(message)
 
             timer = Timer(30.0, cancel_handler, args=(call.message, ))
             timer.start()
