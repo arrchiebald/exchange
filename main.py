@@ -10,7 +10,7 @@ from models import Users, UserHistory, ApplicationsSell, ApplicationsBuy, Base, 
 from random import randint
 from telebot import types
 
-bot = telebot.TeleBot('6250800326:AAEgBf4F8ET3UKDVvajZKI6tlRHEihMWP3Q')
+bot = telebot.TeleBot('6004733986:AAHyD9Y6n-Ildh1-BxKN7I2w23W_TJS3NRk')
 н = '6250800326:AAEgBf4F8ET3UKDVvajZKI6tlRHEihMWP3Q'
 gc = gspread.service_account(filename='exchange-384915-7fec015fbe08.json')
 engine = sqlalchemy.create_engine('postgresql+psycopg2://jgsqklcsypqoky:091e08d9f3b9b038b1c8b1662a34b2bed42c52d2fc6baf6f6809f0a63712ca7b@ec2-3-248-141-201.eu-west-1.compute.amazonaws.com:5432/d6l089hfn0o91n')
@@ -726,7 +726,6 @@ def enter_usdt_buy(message):
 def enter_uah_buy(message):
     with Session() as session:
         if ' ' not in message.text:
-            message.auto_delete_timer
             user_history = session.query(UserHistory).filter(UserHistory.id==message.chat.id).first()
             edited_text = message.text.replace(',', '.')
             exchange_rate = sh.sheet1.get('A2')[0][0].replace(',', '.')
