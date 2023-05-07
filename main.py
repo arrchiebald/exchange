@@ -190,7 +190,7 @@ def action(call):
 Курс: *{application.usdt_rate}*
 Сумма в UAH для получения: *{application.uah_amount}*.
 Количевство USDT для отправки: *{application.usdt_amount}*
-\n\n*ВРЕМЯ ОЖИДАНИЕ ВЫШЛО*
+\n\n*ВРЕМЯ ОЖИДАНИЯ ВЫШЛО*
 '''
                     for adm_mes_id in admins_message_id_sell:
                         if str(id_application) in adm_mes_id:
@@ -203,7 +203,7 @@ def action(call):
                     session.commit()
                     select_action(mess)
 
-            timer = Timer(30.0, cancel_handler, args=(call.message, ))
+            timer = Timer(1800.0, cancel_handler, args=(call.message, ))
             timer.start()
 
             bot.register_next_step_handler(call.message, handle_uah, id_application=id_application, timer=timer)
@@ -393,7 +393,7 @@ def action(call):
                     session.commit()
                     select_action(message)
 
-            timer = Timer(30.0, cancel_handler, args=(call.message, ))
+            timer = Timer(1800.0, cancel_handler, args=(call.message, ))
             timer.start()
 
             bot.register_next_step_handler(call.message, handle_txid, id_application=id_application, timer=timer)
@@ -551,7 +551,7 @@ def enter_uah_sell(message):
                     user_history.last_request_uah_sell = edited_text
                     session.commit()
                 else:
-                    text = f'Минимум для покупки 100 USDT ({min_summa}грн)'
+                    text = f'Минимальная сумма для покупки 100 USDT ({min_summa}грн)'
                     bot.send_message(message.chat.id, text)
                     bot.register_next_step_handler(message, enter_uah_sell)
             elif message.text == '/start':
@@ -592,17 +592,17 @@ def send_request_confirmation_sell(message):
 Курс: {exchange_rate}
 Сумма в UAH для отправки: {last_request_usdt}
 Количевство USDT для получения: {uah_summa}
-Через 10 минут подтверждение заявки пропадёт и вы начнёте сначала.
+❗️❗️ Заявка будет активна 30 минут. По истечении времени заявка автоматически будет отклонена и вам будет необходимо создать новую заявку.
 '''
         f = bot.send_message(message.chat.id, confirmation_text, reply_markup=markup)
         user_confirmations_status_sell.append({str(f.from_user.id): False})
 
         def deleting_confirmation_status_sell(message):
-            sleep(30)
+            sleep(1800)
             for user_status in user_confirmations_status_sell:
                 if str(message.from_user.id) in user_status:
                     markup = types.ReplyKeyboardRemove()
-                    text = 'Время ожидание истекло'
+                    text = 'Время ожидания истекло'
                     bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
                     bot.send_message(chat_id=message.chat.id, text=text, reply_markup=markup)
                     select_action(message)
@@ -631,11 +631,11 @@ def requisites_uah(message):
         users_status_sell.append({str(f.from_user.id): False})
 
         def deleting_status_sell(message):
-            sleep(30)
+            sleep(1800)
             for user_status in users_status_sell:
                 if str(message.from_user.id) in user_status:
                     markup = types.ReplyKeyboardRemove()
-                    text = 'Время ожидание истекло'
+                    text = 'Время ожидания истекло'
                     bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
                     bot.send_message(message.chat.id, text, reply_markup=markup)
                     select_action(message)
@@ -685,7 +685,7 @@ def handle_uah(message, id_application, timer):
         select_action(message)
         return
     else:
-        bot.send_message(message.chat.id, 'Пожалуйста, отправьте скриншот квитанции об переводе средств', parse_mode='Markdown')
+        bot.send_message(message.chat.id, 'Пожалуйста, отправьте скриншот квитанции о переводе средств', parse_mode='Markdown')
         bot.register_next_step_handler(message, handle_uah, id_application=id_application, timer=timer)
 
 # Продажа USDT
@@ -746,7 +746,7 @@ def enter_uah_buy(message):
                     user_history.last_request_uah_buy = edited_text
                     session.commit()
                 else:
-                    text = f'Минимум для продажи 30 USDT ({min_summa}грн)'
+                    text = f'Минимальная сумма для продажи 30 USDT ({min_summa}грн)'
                     bot.send_message(message.chat.id, text)
                     bot.register_next_step_handler(message, enter_uah_buy)
             elif message.text == '/start':
@@ -785,12 +785,12 @@ def send_request_confirmation_buy(message):
 Курс: {exchange_rate}
 Количевство USDT для отправки: {last_request_usdt}
 Сумма в UAH для получения: {uah_summa}
-Через 10 минут подтверждение заявки пропадёт и вы начнёте сначала.'''
+❗️❗️ Заявка будет активна 30 минут. По истечении времени заявка автоматически будет отклонена и вам будет необходимо создать новую заявку.'''
                 f = bot.send_message(message.chat.id, confirmation_text, reply_markup=markup)
                 user_confirmations_status_buy.append({str(f.from_user.id): False})
 
                 def deleting_confirmation_status_buy(message):
-                    sleep(30)
+                    sleep(1800)
                     for user_status in user_confirmations_status_buy:
                         if str(message.from_user.id) in user_status:
                             markup = types.ReplyKeyboardRemove()
@@ -805,7 +805,7 @@ def send_request_confirmation_buy(message):
                 thr = Thread(target=deleting_confirmation_status_buy, args=(f, ))
                 thr.start()
             else:
-                bot.send_message(message.chat.id, 'Уберите буквы')
+                bot.send_message(message.chat.id, 'Уберите пожалуйста буквы')
                 bot.register_next_step_handler(message, send_request_confirmation_buy)
         elif message.text == '/start':
                 markup = types.ReplyKeyboardRemove()
@@ -814,7 +814,7 @@ def send_request_confirmation_buy(message):
                 start(message)
                 return
         else:
-            bot.send_message(message.chat.id, 'Вы неправильно ввели свою карту, пожалуйста, введите свою карту ещё раз')
+            bot.send_message(message.chat.id, 'Вы неправильно ввели свою карту, пожалуйста, попробуйте ещё раз')
             bot.register_next_step_handler(message, send_request_confirmation_buy)
 
 
@@ -834,7 +834,7 @@ def requisites_usdt(message):
         users_status_buy.append({str(f.from_user.id): False})
 
         def deleting_status_buy(message):
-            sleep(30)
+            sleep(1800)
             for user_status in users_status_buy:
                 if str(message.from_user.id) in user_status:
                     markup = types.ReplyKeyboardRemove()
