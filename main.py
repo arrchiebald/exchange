@@ -11,7 +11,7 @@ from models import Users, UserHistory, ApplicationsSell, ApplicationsBuy, Base, 
 from random import randint
 from telebot import types
 
-bot = telebot.TeleBot('6250800326:AAEgBf4F8ET3UKDVvajZKI6tlRHEihMWP3Q')
+bot = telebot.TeleBot('6004733986:AAHyD9Y6n-Ildh1-BxKN7I2w23W_TJS3NRk')
 client = pygsheets.authorize(service_account_file='exchange-384915-7fec015fbe08.json')
 sheet = client.open('Ресурсы для бота')
 gc = gspread.service_account(filename='exchange-384915-7fec015fbe08.json')
@@ -379,7 +379,7 @@ def action(call):
 Курс: *{application.usdt_rate}*
 Количевство для получения в USDT: *{application.usdt_amount}*
 Итоговая сумма для отправки в UAH: *{application.uah_summa}*
-\n\n*ВРЕМЯ ОЖИДАНИЕ ВЫШЛО*
+\n\n*ВРЕМЯ ОЖИДАНИЯ ВЫШЛО*
         '''
                     for adm_mes_id in admins_message_id_buy:
                         if str(id_application) in adm_mes_id:
@@ -630,7 +630,7 @@ def requisites_uah(message):
         users_status_sell.append({str(f.from_user.id): False})
 
         def deleting_status_sell(message):
-            sleep(1800)
+            sleep(3800)
             for user_status in users_status_sell:
                 if str(message.from_user.id) in user_status:
                     markup = types.ReplyKeyboardRemove()
@@ -679,10 +679,12 @@ def handle_uah(message, id_application, timer):
         text = f'Пожалуйста, ожидайте подтверждения транзакции. ID этой сделки: #{application.id}.\nОбычно подтверждение заявки происходит в течении 15 минут.'
         bot.send_message(message.chat.id, text)
     elif message.text == '/start':
-        markup = types.ReplyKeyboardRemove()
-        bot.send_message(message.chat.id, 'Возваращаем...', reply_markup=markup)
-        select_action(message)
-        return
+        with Session() as session:
+            application = session.query(ApplicationsSell).filter(ApplicationsSell.id==id_application).first()
+            select_action(message)
+            session.delete(application)
+            session.commit()
+            return
     else:
         bot.send_message(message.chat.id, 'Пожалуйста, отправьте скриншот квитанции о переводе средств', parse_mode='Markdown')
         bot.register_next_step_handler(message, handle_uah, id_application=id_application, timer=timer)
@@ -784,7 +786,8 @@ def send_request_confirmation_buy(message):
 Курс: {exchange_rate}
 Количевство USDT для отправки: {last_request_usdt}
 Сумма в UAH для получения: {uah_summa}
-❗️❗️ Заявка будет активна 30 минут. По истечении времени заявка автоматически будет отклонена и вам будет необходимо создать новую заявку.'''
+❗️❗️ Заявка будет активна 30 минут. По истечении времени заявка автоматически будет отклонена и вам будет необходимо создать новую заявку.
+'''
                 f = bot.send_message(message.chat.id, confirmation_text, reply_markup=markup)
                 user_confirmations_status_buy.append({str(f.from_user.id): False})
 
@@ -793,7 +796,7 @@ def send_request_confirmation_buy(message):
                     for user_status in user_confirmations_status_buy:
                         if str(message.from_user.id) in user_status:
                             markup = types.ReplyKeyboardRemove()
-                            text = 'Время ожидание истекло'
+                            text = 'Время ожидания истекло'
                             bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
                             bot.send_message(message.chat.id, text, reply_markup=markup)
                             select_action(message)
@@ -804,7 +807,7 @@ def send_request_confirmation_buy(message):
                 thr = Thread(target=deleting_confirmation_status_buy, args=(f, ))
                 thr.start()
             else:
-                bot.send_message(message.chat.id, 'Уберите пожалуйста буквы')
+                bot.send_message(message.chat.id, 'Уберите, пожалуйста, буквы')
                 bot.register_next_step_handler(message, send_request_confirmation_buy)
         elif message.text == '/start':
                 markup = types.ReplyKeyboardRemove()
@@ -837,7 +840,7 @@ def requisites_usdt(message):
             for user_status in users_status_buy:
                 if str(message.from_user.id) in user_status:
                     markup = types.ReplyKeyboardRemove()
-                    text = 'Время ожидание истекло'
+                    text = 'Время ожидания истекло'
                     bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
                     bot.send_message(message.chat.id, text, reply_markup=markup)
                     select_action(message)
@@ -852,12 +855,13 @@ def requisites_usdt(message):
 def handle_txid(message, id_application, timer):
     timer.cancel()
     with Session() as session:
+        application = session.query(ApplicationsBuy).filter(ApplicationsBuy.id==id_application).first()
         if message.text == '/start':
-            markup = types.ReplyKeyboardRemove()
             bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
             select_action(message)
+            session.delete(application)
+            session.commit()
             return
-        application = session.query(ApplicationsBuy).filter(ApplicationsBuy.id==id_application).first()
         application.txid = message.text
         application.data_created = datetime.now().strftime('%d.%m.%Y')
         application.time_created = datetime.now().strftime('%H:%M:%S')
@@ -903,13 +907,13 @@ def data_upload():
         # Выгрузка в таблицу всех заявок на покупку USDT
         data = []
         for application in todays_sell_applications:
-            row_data = [f'{application.id}', f'{application.bank}', f'{application.wallet}',
-                        f'{application.data_created}', f'{application.time_created}',
-                        f'{application.usdt_rate}', 'продажа']
+            row_data = [f'{application.id}', f'{application.data_created}', f'{application.time_created}',
+                        'продажа', f'{application.usdt_rate}', f'{application.usdt_amount}',
+                        f'{application.uah_amount}', f'{application.bank}', f'{application.wallet}']
             data.append(row_data)
 
         num_rows = len(data)
-        cell_range = f'A{clear_sheet}:G{clear_sheet + num_rows - 1}'
+        cell_range = f'A{clear_sheet}:I{clear_sheet + num_rows - 1}'
 
         worksheet.update(cell_range, data)
 
@@ -923,18 +927,18 @@ def data_upload():
         clear_sheet = len(column_a) + 1
         data = []
         for application in todays_buy_applications:
-            row_data = [f'{application.id}', f'{application.bank}', f'{application.credit_card}',
-                        f'{application.data_created}', f'{application.time_created}',
-                        f'{application.usdt_rate}', 'покупка']
+            row_data = [f'{application.id}', f'{application.data_created}', f'{application.time_created}',
+                        'покупка', f'{application.usdt_rate}', f'{application.usdt_amount}',
+                        f'{application.uah_summa}', f'{application.bank}', f'{application.credit_card}']
             data.append(row_data)
 
         num_rows = len(data)
-        cell_range = f'A{clear_sheet}:G{clear_sheet + num_rows - 1}'
+        cell_range = f'A{clear_sheet}:I{clear_sheet + num_rows - 1}'
 
         worksheet.update(cell_range, data)
         
 # Эта функция активирует data_upload в 23:59 каждый день
-schedule.every().day.at("23:59:00").do(data_upload)
+schedule.every().day.at("12:36:00").do(data_upload)
 
 # Эта функция запускает цикл запускающий отправки данных по расписанию каждый день
 def run_schedule():
