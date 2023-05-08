@@ -11,7 +11,7 @@ from models import Users, UserHistory, ApplicationsSell, ApplicationsBuy, Base, 
 from random import randint
 from telebot import types
 
-bot = telebot.TeleBot('6004733986:AAHyD9Y6n-Ildh1-BxKN7I2w23W_TJS3NRk')
+bot = telebot.TeleBot('6250800326:AAEgBf4F8ET3UKDVvajZKI6tlRHEihMWP3Q')
 client = pygsheets.authorize(service_account_file='exchange-384915-7fec015fbe08.json')
 sheet = client.open('Ресурсы для бота')
 gc = gspread.service_account(filename='exchange-384915-7fec015fbe08.json')
@@ -630,7 +630,7 @@ def requisites_uah(message):
         users_status_sell.append({str(f.from_user.id): False})
 
         def deleting_status_sell(message):
-            sleep(3800)
+            sleep(1800)
             for user_status in users_status_sell:
                 if str(message.from_user.id) in user_status:
                     markup = types.ReplyKeyboardRemove()
