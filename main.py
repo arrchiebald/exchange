@@ -938,7 +938,7 @@ def data_upload():
         worksheet.update(cell_range, data)
         
 # Эта функция активирует data_upload в 23:59 каждый день
-schedule.every().day.at("12:36:00").do(data_upload)
+schedule.every().day.at("23:59:00").do(data_upload)
 
 # Эта функция запускает цикл запускающий отправки данных по расписанию каждый день
 def run_schedule():
