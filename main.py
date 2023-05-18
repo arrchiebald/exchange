@@ -11,7 +11,7 @@ from models import Users, UserHistory, ApplicationsSell, ApplicationsBuy, Base, 
 from random import randint
 from telebot import types
 
-bot = telebot.TeleBot('6004733986:AAHyD9Y6n-Ildh1-BxKN7I2w23W_TJS3NRk')
+bot = telebot.TeleBot('5910855558:AAGpaOxVB-DgWm1Gdilv4mBAFv4vQ0eZyvc')
 client = pygsheets.authorize(service_account_file='exchange-384915-7fec015fbe08.json')
 sheet = client.open('Ресурсы для бота')
 gc = gspread.service_account(filename='exchange-384915-7fec015fbe08.json')
