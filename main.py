@@ -73,7 +73,7 @@ def action(call):
         ok_btn = types.InlineKeyboardButton('OK', callback_data='ok_sell')
         back_btn = types.InlineKeyboardButton('⬅️Назад', callback_data='back')
         markup.add(ok_btn, back_btn)
-        text = f'Курс на данный момент {sheet.sheet1.cell("B2").value} за 1 USDT'
+        text = f'Курс на данный момент {sheet.sheet1.cell("B2").value} UAH за 1 USDT'
         bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
         bot.send_message(call.message.chat.id, text, reply_markup=markup)
 
@@ -262,7 +262,7 @@ def action(call):
         ok_btn = types.InlineKeyboardButton('OK', callback_data='ok_buy')
         back_btn = types.InlineKeyboardButton('⬅️Назад', callback_data='back')
         markup.add(ok_btn, back_btn)
-        text = f'Курс на данный момент {sheet.sheet1.cell("A2").value} за 1 USDT'
+        text = f'Курс на данный момент {sheet.sheet1.cell("A2").value} UAH за 1 USDT'
         bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
         bot.send_message(call.message.chat.id, text, reply_markup=markup)
 
