@@ -403,8 +403,8 @@ def action(call):
 Банк: *{db_id.bank}*
 Кошелёк: `{db_id.credit_card}`
 Курс: *{db_id.usdt_rate}*
-Сумма в UAH для получения: *{db_id.usdt_amount}*
-Количевство USDT для отправки: *{db_id.uah_summa}*
+Количевство USDT для получения: *{db_id.usdt_amount}*
+Итоговая сумма для отправки в UAH: *{db_id.uah_summa}*
 TXid сделки: *{db_id.txid}*
 \n\n*ЗАЯВКА ПОДТВЕРЖДЕНА* 
         '''
@@ -429,8 +429,8 @@ TXid сделки: *{db_id.txid}*
 Банк: *{db_id.bank}*
 Кошелёк: `{db_id.credit_card}`
 Курс: *{db_id.usdt_rate}*
-Сумма в UAH для получения: *{db_id.usdt_amount}*
-Количевство USDT для отправки: *{db_id.uah_summa}*
+Количевство USDT для получения: *{db_id.usdt_amount}*
+Итоговая сумма для отправки в UAH: *{db_id.uah_summa}*
 TXid сделки: *{db_id.txid}*
 \n\n*ЗАЯВКА ОТКЛОНЕНА* 
         '''
@@ -656,8 +656,8 @@ def handle_uah(message, id_application, timer):
 Банк: *{application.bank}*
 Кошелёк: `{application.wallet}`
 Курс: *{application.usdt_rate}*
-Количевство для получения USDT: *{application.uah_amount}*
-Итоговая сумма для отправки в UAH: *{application.usdt_amount}*
+Сумма в UAH для получения: *{application.uah_amount}*
+Количевство USDT для отправки: *{application.usdt_amount}*
         '''
         markup = types.InlineKeyboardMarkup(row_width=1)
         agree_transactions = types.InlineKeyboardButton('Подтверждаю обмен', callback_data=f'agree_transactions_sell{application.id}')
