@@ -3,7 +3,6 @@ import gspread
 import sqlalchemy
 import schedule
 import json
-import pygsheets
 from time import sleep
 from threading import Thread, Timer
 from datetime import datetime
@@ -12,8 +11,6 @@ from random import randint
 from telebot import types
 
 bot = telebot.TeleBot('5910855558:AAGpaOxVB-DgWm1Gdilv4mBAFv4vQ0eZyvc')
-client = pygsheets.authorize(service_account_file='exchange-384915-7fec015fbe08.json')
-sheet = client.open('Ресурсы для бота')
 gc = gspread.service_account(filename='exchange-384915-7fec015fbe08.json')
 engine = sqlalchemy.create_engine('postgresql+psycopg2://jgsqklcsypqoky:091e08d9f3b9b038b1c8b1662a34b2bed42c52d2fc6baf6f6809f0a63712ca7b@ec2-3-248-141-201.eu-west-1.compute.amazonaws.com:5432/d6l089hfn0o91n')
 Session = sqlalchemy.orm.sessionmaker(bind=engine)
@@ -73,7 +70,7 @@ def action(call):
         ok_btn = types.InlineKeyboardButton('OK', callback_data='ok_sell')
         back_btn = types.InlineKeyboardButton('⬅️Назад', callback_data='back')
         markup.add(ok_btn, back_btn)
-        text = f'Курс на данный момент {sheet.sheet1.cell("B2").value} UAH за 1 USDT'
+        text = f'Курс на данный момент {sh.sheet1.get("B2")[0][0]} UAH за 1 USDT'
         bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
         bot.send_message(call.message.chat.id, text, reply_markup=markup)
 
@@ -262,7 +259,7 @@ def action(call):
         ok_btn = types.InlineKeyboardButton('OK', callback_data='ok_buy')
         back_btn = types.InlineKeyboardButton('⬅️Назад', callback_data='back')
         markup.add(ok_btn, back_btn)
-        text = f'Курс на данный момент {sheet.sheet1.cell("A2").value} UAH за 1 USDT'
+        text = f'Курс на данный момент {sh.sheet1.get("A2")[0][0]} UAH за 1 USDT'
         bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
         bot.send_message(call.message.chat.id, text, reply_markup=markup)
 
