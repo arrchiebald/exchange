@@ -17,7 +17,7 @@ class UserHistory(Base):
     __tablename__ = 'user_history'
 
     id = Column(BigInteger, primary_key=True)
-    last_trc20_wallet = Column(String(100))
+    last_trc20_wallet = Column(Text)
     last_request_uah_buy = Column(String(100))
     last_request_uah_sell = Column(String(100))
     last_card = Column(String(100))
@@ -32,11 +32,12 @@ class ApplicationsSell(Base):
     user_id = Column(BigInteger)
     bank = Column(String(32))
     usdt_rate = Column(Float)
-    wallet = Column(String(62))
+    wallet = Column(Text)
     uah_amount = Column(Float)
     usdt_amount = Column(Float)
     data_created = Column(String(20))
     time_created = Column(String(20))
+    admin_ids = Column(String(30))
     status = Column(String(30))
 
 class ApplicationsBuy(Base):
@@ -52,4 +53,5 @@ class ApplicationsBuy(Base):
     uah_summa = Column(Float)
     data_created = Column(String(20))
     time_created = Column(String(20))
+    admin_ids = Column(String(30))
     status = Column(String(30))

@@ -2,7 +2,6 @@ import telebot
 import gspread
 import sqlalchemy
 import schedule
-import json
 from time import sleep
 from threading import Thread, Timer
 from datetime import datetime
@@ -217,14 +216,9 @@ def action(call):
 Количевство USDT для отправки: *{db_id.usdt_amount}*
 \n\n*ЗАЯВКА ПОДТВЕРЖДЕНА* 
         '''
-            with open('order_sell_chat_id.json', 'r') as f:
-                data = json.load(f)
-                chat_id = data[str(db_id.id)].split()
+            chat_id = db_id.admin_ids.split()
             for i in range(len(admins_chat_id)):
                 bot.edit_message_caption(chat_id=admins_chat_id[i], message_id=chat_id[i], caption=new_caption, parse_mode='Markdown')
-            data.pop(str(db_id.id))
-            with open('order_sell_chat_id.json', 'w') as delete_id:
-                json.dump(data, delete_id)
             bot.send_message(db_id.user_id, text)
             db_id.status = 'approved'
             session.commit()
@@ -243,14 +237,9 @@ def action(call):
 Количевство USDT для отправки: *{db_id.usdt_amount}*
 \n\n*ЗАЯВКА ОТКЛОНЕНА* 
         '''
-            with open('order_sell_chat_id.json', 'r') as f:
-                data = json.load(f)
-                chat_id = data[str(db_id.id)].split()
+            chat_id = db_id.admin_ids.split()
             for i in range(len(admins_chat_id)):
                 bot.edit_message_caption(chat_id=admins_chat_id[i], message_id=chat_id[i], caption=new_caption, parse_mode='Markdown')
-            data.pop(str(db_id.id))
-            with open('order_sell_chat_id.json', 'w') as delete_id:
-                json.dump(data, delete_id)
             bot.register_next_step_handler(call.message, reject_reason_sell, reason=call.data[24:])
 
     # Покупка USDT
@@ -408,14 +397,9 @@ def action(call):
 TXid сделки: *{db_id.txid}*
 \n\n*ЗАЯВКА ПОДТВЕРЖДЕНА* 
         '''
-            with open('order_buy_chat_id.json', 'r') as f:
-                data = json.load(f)
-                chat_id = data[str(db_id.id)].split()
+            chat_id = db_id.admin_ids.split()
             for i in range(len(admins_chat_id)):
                 bot.edit_message_text(chat_id=admins_chat_id[i], message_id=chat_id[i], text=new_text, parse_mode='Markdown')
-            data.pop(str(db_id.id))
-            with open('order_buy_chat_id.json', 'w') as delete_id:
-                json.dump(data, delete_id)
             bot.send_message(db_id.user_id, text)
             db_id.status = 'approved'
             session.commit()
@@ -434,14 +418,9 @@ TXid сделки: *{db_id.txid}*
 TXid сделки: *{db_id.txid}*
 \n\n*ЗАЯВКА ОТКЛОНЕНА* 
         '''
-            with open('order_buy_chat_id.json', 'r') as f:
-                data = json.load(f)
-                chat_id = data[str(db_id.id)].split()
+            chat_id = db_id.admin_ids.split()
             for i in range(len(admins_chat_id)):
                 bot.edit_message_text(chat_id=admins_chat_id[i], message_id=chat_id[i], text=new_text, parse_mode='Markdown')
-            data.pop(str(db_id.id))
-            with open('order_buy_chat_id.json', 'w') as delete_id:
-                json.dump(data, delete_id)
             bot.send_message(call.message.chat.id, text)
             bot.register_next_step_handler(call.message, reject_reason_buy, reason=call.data[23:])
 
@@ -650,7 +629,6 @@ def handle_uah(message, id_application, timer):
             application = session.query(ApplicationsSell).filter(ApplicationsSell.id==id_application).first()
             application.data_created = datetime.now().strftime('%d.%m.%Y')
             application.time_created = datetime.now().strftime('%H:%M:%S')
-            session.commit()
             text = f'''
 *Заявка на продажу USDT #{application.id}*
 Банк: *{application.bank}*
@@ -659,22 +637,18 @@ def handle_uah(message, id_application, timer):
 Сумма в UAH для получения: *{application.uah_amount}*
 Количевство USDT для отправки: *{application.usdt_amount}*
         '''
-        markup = types.InlineKeyboardMarkup(row_width=1)
-        agree_transactions = types.InlineKeyboardButton('Подтверждаю обмен', callback_data=f'agree_transactions_sell{application.id}')
-        reject_transactions = types.InlineKeyboardButton('Отклоняю обмен', callback_data=f'reject_transactions_sell{application.id}')
-        markup.add(agree_transactions, reject_transactions)
-        admins_id = ''
-        for admin_chat_id in admins_chat_id:
-            admin_message = bot.send_photo(admin_chat_id, message.photo[-1].file_id, caption=text, reply_markup=markup, parse_mode='Markdown')
-            admins_id += f'{admin_message.message_id} '
-        order_chat_ids = {str(application.id): admins_id}
-        with open('order_sell_chat_id.json', 'r') as f:
-            parse_file = json.loads(f.read())
-            parse_file.update(order_chat_ids)
-            with open('order_sell_chat_id.json', 'w') as f:
-                json.dump(parse_file, f)
-        text = f'Пожалуйста, ожидайте подтверждения транзакции. ID этой сделки: #{application.id}.\nОбычно подтверждение заявки происходит в течении 15 минут.'
-        bot.send_message(message.chat.id, text)
+            markup = types.InlineKeyboardMarkup(row_width=1)
+            agree_transactions = types.InlineKeyboardButton('Подтверждаю обмен', callback_data=f'agree_transactions_sell{application.id}')
+            reject_transactions = types.InlineKeyboardButton('Отклоняю обмен', callback_data=f'reject_transactions_sell{application.id}')
+            markup.add(agree_transactions, reject_transactions)
+            admins_id = ''
+            for admin_chat_id in admins_chat_id:
+                admin_message = bot.send_photo(admin_chat_id, message.photo[-1].file_id, caption=text, reply_markup=markup, parse_mode='Markdown')
+                admins_id += f'{admin_message.message_id} '
+            application.admin_ids = admins_id
+            session.commit()
+            text = f'Пожалуйста, ожидайте подтверждения транзакции. ID этой сделки: #{application.id}.\nОбычно подтверждение заявки происходит в течении 15 минут.'
+            bot.send_message(message.chat.id, text)
     elif message.text == '/start':
         with Session() as session:
             application = session.query(ApplicationsSell).filter(ApplicationsSell.id==id_application).first()
@@ -862,7 +836,6 @@ def handle_txid(message, id_application, timer):
         application.txid = message.text
         application.data_created = datetime.now().strftime('%d.%m.%Y')
         application.time_created = datetime.now().strftime('%H:%M:%S')
-        session.commit()
         text = f'''
 *Заявка на покупку USDT #{application.id}*
 Банк: *{application.bank}*
@@ -880,12 +853,8 @@ TXid сделки: *{application.txid}*
         for admin_chat_id in admins_chat_id:
             a = bot.send_message(admin_chat_id, text, reply_markup=markup, parse_mode='Markdown')
             admins_id += f'{a.message_id} '
-        order_chat_ids = {str(application.id): admins_id}
-        with open('order_buy_chat_id.json', 'r') as f:
-            parse_file = json.loads(f.read())
-            parse_file.update(order_chat_ids)
-            with open('order_buy_chat_id.json', 'w') as f:
-                json.dump(parse_file, f)
+        application.admin_ids = admins_id
+        session.commit()
         text = f'Пожалуйста, ожидайте подтверждения транзакции. Обычно подтверждение заявки происходит в течении 15 минут. ID этой сделки: #{application.id}'
         bot.send_message(message.chat.id, text)
 
