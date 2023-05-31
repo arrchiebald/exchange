@@ -150,7 +150,7 @@ def action(call):
                 id=id_application,
                 user_id=call.message.chat.id,
                 bank=banks_sell_calldata.get(user_history.last_bank),
-                usdt_rate=sh.sheet1.get('B2')[0][0],
+                usdt_rate=sh.sheet1.get('B2')[0][0].replace(',', '.'),
                 wallet=user_history.last_trc20_wallet,
                 uah_amount=user_history.last_request_uah_sell,
                 usdt_amount=user_history.last_request_usdt_sell,
