@@ -317,7 +317,7 @@ def action(call):
                 users_status_buy.pop(user_status_index)
                 break
         with Session() as session:
-            text = 'Отправьте TXid сделки'
+            text = 'Отправьте TXid сделки \n[Если не знаете, где взять TXID](https://www.binance.com/ru/support/faq/%D0%BA%D0%B0%D0%BA-%D0%BD%D0%B0%D0%B9%D1%82%D0%B8-id-%D1%82%D1%80%D0%B0%D0%BD%D0%B7%D0%B0%D0%BA%D1%86%D0%B8%D0%B8-txid-2c325e53daf04442adbaf8f6ba052f71)'
             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=text)
             id_application = randint(1000000, 9999999)
             applications = session.query(ApplicationsBuy).all()
